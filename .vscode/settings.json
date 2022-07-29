@@ -1,0 +1,26 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "\\.tf$",
+        "isAsync": false,
+        "cmd": "terraform fmt ${file}"
+      },
+      {
+        "match": "\\.tfvars$",
+        "isAsync": false,
+        "cmd": "terraform fmt ${file}"
+      },
+      {
+        "match": "\\.tfvars\\..*$",
+        "isAsync": false,
+        "cmd": "terraform fmt ${file}"
+      }
+    ]
+  },
+  "files.associations": {
+    "*.tfvars.*": "terraform",
+    "*.tfbackend": "terraform",
+    "*.tfbackend.*": "terraform"
+  }
+}
