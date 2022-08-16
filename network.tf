@@ -14,7 +14,8 @@ module "vpc" {
 
 # IP whitelist
 module "allowed_ip_ranges" {
-  source = "terraform-aws-modules/security-group/aws"
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "3.1.0"
 
   name        = "${local.name}-ip-st"
   description = "${local.name}-ip-st"
@@ -25,7 +26,8 @@ module "allowed_ip_ranges" {
 }
 
 module "nat" {
-  source = "int128/nat-instance/aws"
+  source  = "int128/nat-instance/aws"
+  version = "2.0.1"
 
   enabled                     = var.environment != "prod"
   name                        = local.name

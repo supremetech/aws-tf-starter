@@ -4,7 +4,9 @@ resource "tls_private_key" "ssh_key" {
 }
 
 module "key_pair" {
-  source     = "terraform-aws-modules/key-pair/aws"
+  source  = "terraform-aws-modules/key-pair/aws"
+  version = "2.0.0"
+
   key_name   = local.name
   public_key = tls_private_key.ssh_key.public_key_openssh
 }
