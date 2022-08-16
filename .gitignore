@@ -19,3 +19,6 @@ backend.tfvars
 # Custom
 .env
 *.pem
+
+# VSCode
+.vscode/
