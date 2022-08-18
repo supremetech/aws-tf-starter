@@ -1,9 +1,10 @@
 Env=$(shell cat ../.env)
 
-.PHONY: all init apply
+.PHONY: all init validate plan apply
 
 all:
 	make init
+	make validate
 	make apply
 
 init:
@@ -12,6 +13,13 @@ init:
 	terraform workspace new $(Env) || true
 	terraform workspace select $(Env)
 
+validate:
+	tflint
+	terraform validate
+
+plan:
+	terraform plan
+
 apply:
 	terraform apply
 
@@ -19,7 +27,8 @@ apply:
 .PHONY: _config
 
 _config:
-	! [ -f ../config/backend.tfvars.$(Env) ]
+	# Comment below line if you want to re-config the backend
+	# ! [ -f ../config/backend.tfvars.$(Env) ]
 	rm -f terraform.tfvars
 	for var in \
 		project_name \

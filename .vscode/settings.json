@@ -19,8 +19,6 @@
     ]
   },
   "files.associations": {
-    "*.tfvars.*": "terraform",
-    "*.tfbackend": "terraform",
-    "*.tfbackend.*": "terraform"
+    "*.tfvars.*": "terraform"
   }
 }
