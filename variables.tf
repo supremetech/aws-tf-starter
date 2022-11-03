@@ -30,10 +30,10 @@ variable "allowed_ip_ranges" {
 
 variable "vpc" {
   default = {
-    cidr_block      = ""
-    available_zones = []
-    public_subnets  = []
-    private_subnets = []
+    cidr_block         = ""
+    availability_zones = []
+    public_subnets     = []
+    private_subnets    = []
   }
 }
 
@@ -55,5 +55,5 @@ locals {
 }
 
 locals {
-  ssh_key_name = "${var.project_name}-${var.environment}-${var.aws_region}-key"
+  ssh_key_name = "${var.project_name}-${var.environment}-${var.region}-key"
 }

@@ -3,7 +3,7 @@ module "vpc" {
   version                = "~> 3.13.0"
   name                   = local.name_prefix
   cidr                   = var.vpc.cidr_block
-  azs                    = var.vpc.available_zones
+  azs                    = var.vpc.availability_zones
   public_subnets         = var.vpc.public_subnets
   private_subnets        = var.vpc.private_subnets
   enable_nat_gateway     = var.environment == "prod"
@@ -13,14 +13,14 @@ module "vpc" {
 }
 
 module "nat_instance" {
-  count  = var.environment == "dev" && length(var.vpc.availability_zone) >= 1 ? (!var.vpc.one_nat_per_az ? 1 : length(var.vpc.availability_zone)) : 0
+  count  = var.environment == "dev" && length(var.vpc.availability_zones) >= 1 ? (!var.vpc.one_nat_per_az ? 1 : length(var.vpc.availability_zones)) : 0
   source = "./modules/nat_instance"
 
   name                    = "${local.name_prefix}-nat-instance"
   vpc_id                  = module.vpc.vpc_id
   public_subnet           = !var.vpc.one_nat_per_az ? module.vpc.public_subnets[0] : module.vpc.public_subnets[count.index]
   private_route_table_ids = !var.vpc.one_nat_per_az ? module.vpc.private_route_table_ids : ["${module.vpc.private_route_table_ids[count.index]}"]
-  availability_zone       = !var.vpc.use_one_nat_instance ? module.vpc.azs[0] : module.vpc.azs[count.index]
+  availability_zone       = !var.vpc.one_nat_per_az ? module.vpc.azs[0] : module.vpc.azs[count.index]
   security_group_id       = aws_security_group.nat_instance.id
   key_name                = local.ssh_key_name
   use_spot_instance       = true
@@ -30,7 +30,7 @@ module "nat_instance" {
 }
 
 resource "aws_eip" "eip_nat_instance" {
-  count             = var.environment == "dev" && length(var.vpc.availability_zone) >= 1 ? (!var.vpc.one_nat_per_az ? 1 : length(var.vpc.availability_zone)) : 0
+  count             = var.environment == "dev" && length(var.vpc.availability_zones) >= 1 ? (!var.vpc.one_nat_per_az ? 1 : length(var.vpc.availability_zones)) : 0
   network_interface = !var.vpc.one_nat_per_az ? module.nat_instance[0].eni_id : module.nat_instance[count.index].eni_id
 
   tags = merge(
@@ -69,6 +69,7 @@ resource "aws_security_group_rule" "nat_instance_ingress_private_subnets" {
 }
 
 resource "aws_security_group_rule" "nat_instance_ingress_ssh" {
+  count             = length(var.allowed_ip_ranges) > 0 ? 1 : 0
   security_group_id = aws_security_group.nat_instance.id
   type              = "ingress"
   cidr_blocks       = var.allowed_ip_ranges
