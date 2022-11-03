@@ -36,3 +36,24 @@ variable "vpc" {
     private_subnets = []
   }
 }
+
+locals {
+  description = "AWS account profile name"
+  profile     = "${var.project_name}-${var.environment}"
+}
+
+locals {
+  name_prefix = "${var.project_name}-${var.environment}"
+}
+
+locals {
+  common_tags = {
+    Builder     = "Terraform",
+    Environment = "${var.environment}"
+    Name        = "${var.project_name}-${var.environment}"
+  }
+}
+
+locals {
+  ssh_key_name = "${var.project_name}-${var.environment}-${var.aws_region}-key"
+}

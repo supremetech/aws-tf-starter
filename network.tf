@@ -1,52 +1,75 @@
 module "vpc" {
   source                 = "terraform-aws-modules/vpc/aws"
   version                = "~> 3.13.0"
-  name                   = local.name
+  name                   = local.name_prefix
   cidr                   = var.vpc.cidr_block
   azs                    = var.vpc.available_zones
   public_subnets         = var.vpc.public_subnets
   private_subnets        = var.vpc.private_subnets
   enable_nat_gateway     = var.environment == "prod"
   single_nat_gateway     = var.environment == "dev"
-  one_nat_gateway_per_az = true
-  tags                   = local.tags
+  one_nat_gateway_per_az = var.vpc.one_nat_per_az
+  tags                   = local.common_tags
 }
 
-# IP whitelist
-module "allowed_ip_ranges" {
-  source  = "terraform-aws-modules/security-group/aws"
-  version = "3.1.0"
+module "nat_instance" {
+  count  = var.environment == "dev" && length(var.vpc.availability_zone) >= 1 ? (!var.vpc.one_nat_per_az ? 1 : length(var.vpc.availability_zone)) : 0
+  source = "./modules/nat_instance"
 
-  name        = "${local.name}-ip-st"
-  description = "${local.name}-ip-st"
+  name                    = "${local.name_prefix}-nat-instance"
+  vpc_id                  = module.vpc.vpc_id
+  public_subnet           = !var.vpc.one_nat_per_az ? module.vpc.public_subnets[0] : module.vpc.public_subnets[count.index]
+  private_route_table_ids = !var.vpc.one_nat_per_az ? module.vpc.private_route_table_ids : ["${module.vpc.private_route_table_ids[count.index]}"]
+  availability_zone       = !var.vpc.use_one_nat_instance ? module.vpc.azs[0] : module.vpc.azs[count.index]
+  security_group_id       = aws_security_group.nat_instance.id
+  key_name                = local.ssh_key_name
+  use_spot_instance       = true
+
+  tags = local.common_tags
+
+}
+
+resource "aws_eip" "eip_nat_instance" {
+  count             = var.environment == "dev" && length(var.vpc.availability_zone) >= 1 ? (!var.vpc.one_nat_per_az ? 1 : length(var.vpc.availability_zone)) : 0
+  network_interface = !var.vpc.one_nat_per_az ? module.nat_instance[0].eni_id : module.nat_instance[count.index].eni_id
+
+  tags = merge(
+    {
+      Name = "${local.name_prefix}-eip-nat"
+    }, local.common_tags
+  )
+}
+
+###############################
+# NAT Instance Security Group #
+###############################
+resource "aws_security_group" "nat_instance" {
+  name_prefix = "${local.name_prefix}-nat-instance-sg"
   vpc_id      = module.vpc.vpc_id
-
-  ingress_cidr_blocks = var.allowed_ip_ranges
-  ingress_rules       = ["all-tcp"]
+  description = "Security group for NAT instance"
+  tags        = local.common_tags
 }
 
-module "nat" {
-  source  = "int128/nat-instance/aws"
-  version = "2.0.1"
-
-  enabled                     = var.environment != "prod"
-  name                        = local.name
-  vpc_id                      = module.vpc.vpc_id
-  public_subnet               = module.vpc.public_subnets[0]
-  private_subnets_cidr_blocks = module.vpc.private_subnets_cidr_blocks
-  private_route_table_ids     = module.vpc.private_route_table_ids
-  key_name                    = module.key_pair.key_pair_key_name
+resource "aws_security_group_rule" "nat_instance_egress" {
+  security_group_id = aws_security_group.nat_instance.id
+  type              = "egress"
+  cidr_blocks       = ["0.0.0.0/0"]
+  from_port         = 0
+  to_port           = 65535
+  protocol          = "all"
 }
 
-resource "aws_eip" "nat" {
-  network_interface = module.nat.eni_id
-  tags = {
-    Name = "${local.name}-nat"
-  }
+resource "aws_security_group_rule" "nat_instance_ingress_private_subnets" {
+  security_group_id = aws_security_group.nat_instance.id
+  type              = "ingress"
+  cidr_blocks       = module.vpc.private_subnets_cidr_blocks
+  from_port         = 0
+  to_port           = 65535
+  protocol          = "all"
 }
 
-resource "aws_security_group_rule" "nat_ssh" {
-  security_group_id = module.nat.sg_id
+resource "aws_security_group_rule" "nat_instance_ingress_ssh" {
+  security_group_id = aws_security_group.nat_instance.id
   type              = "ingress"
   cidr_blocks       = var.allowed_ip_ranges
   from_port         = 22

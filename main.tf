@@ -19,11 +19,5 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 locals {
-  name = "${var.project_name}-${var.environment}"
-  tags = {
-    Name        = local.name
-    Environment = var.environment
-    Builder     = "Terraform"
-  }
   account_id = data.aws_caller_identity.current.account_id
 }
