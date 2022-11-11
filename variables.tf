@@ -9,7 +9,7 @@ variable "project_name" {
 variable "environment" {
   type = string
   validation {
-    condition     = contains(["dev", "test", "stg", "prod", "phuocpham"], var.environment)
+    condition     = contains(["dev", "test", "stg", "prod"], var.environment)
     error_message = "The environment must be dev, test, stg or prod."
   }
 }
@@ -30,6 +30,10 @@ variable "allowed_ip_ranges" {
 
 variable "vpc" {
   type = any
+  validation {
+    condition     = contains(["instance", "gateway"], var.vpc.nat_type)
+    error_message = "The nat type must be instance or gateway."
+  }
   default = {
     cidr_block         = ""
     availability_zones = []

@@ -12,7 +12,7 @@ module "key_pair" {
 }
 
 resource "local_file" "ssh_key" {
-  filename        = "${local.ssh_key_name}.pem"
+  filename        = "${module.key_pair.key_pair_name}.pem"
   content         = tls_private_key.ssh_key.private_key_pem
   file_permission = "0600"
 }

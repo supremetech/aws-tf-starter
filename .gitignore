@@ -22,7 +22,7 @@ backend.tfvars
 # Custom
 .env
 *.pem
+.DS_Store
 
 # VSCode
-.vscode/
-modules/.DS_Store
+
