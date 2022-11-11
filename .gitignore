@@ -1,3 +1,6 @@
+# OS files
+.DS_Store
+
 # Local .terraform directories
 .terraform/
 
@@ -15,10 +18,10 @@ crash.log
 *.tfvars.*
 !terraform.tfvars.example
 backend.tfvars
-
+*.out
+.terraform.lock.hcl
 # Custom
 .env
 *.pem
-
 # VSCode
-.vscode/
+*.log

@@ -29,10 +29,31 @@ variable "allowed_ip_ranges" {
 }
 
 variable "vpc" {
+  type = any
+  validation {
+    condition     = contains(["instance", "gateway"], var.vpc.nat_type)
+    error_message = "The nat type must be instance or gateway."
+  }
   default = {
-    cidr_block      = ""
-    available_zones = []
-    public_subnets  = []
-    private_subnets = []
+    cidr_block         = ""
+    availability_zones = []
+    public_subnets     = []
+    private_subnets    = []
+  }
+}
+
+locals {
+  aws_profile = "${var.project_name}-${var.environment}"
+}
+
+locals {
+  name = "${var.project_name}-${var.environment}"
+}
+
+locals {
+  common_tags = {
+    Builder     = "Terraform",
+    Environment = var.environment
+    Service     = "${var.project_name}-${var.environment}"
   }
 }
