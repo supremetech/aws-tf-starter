@@ -25,4 +25,5 @@ backend.tfvars
 .DS_Store
 
 # VSCode
+*.log
 
