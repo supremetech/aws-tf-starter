@@ -43,7 +43,7 @@ variable "vpc" {
 }
 
 locals {
-  profile = "${var.project_name}-${var.environment}"
+  aws_profile = "${var.project_name}-${var.environment}"
 }
 
 locals {
@@ -56,8 +56,4 @@ locals {
     Environment = var.environment
     Service     = "${var.project_name}-${var.environment}"
   }
-}
-
-locals {
-  ssh_key_name = "${var.project_name}-${var.environment}-${var.region}-key"
 }

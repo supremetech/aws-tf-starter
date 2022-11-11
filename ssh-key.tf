@@ -7,7 +7,7 @@ module "key_pair" {
   source  = "terraform-aws-modules/key-pair/aws"
   version = "2.0.0"
 
-  key_name   = local.ssh_key_name
+  key_name   = "${var.project_name}-${var.environment}-ssh-${var.region}"
   public_key = tls_private_key.ssh_key.public_key_openssh
 }
 

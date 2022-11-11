@@ -20,7 +20,7 @@ terraform {
 }
 
 provider "aws" {
-  profile             = local.profile
+  profile             = local.aws_profile
   region              = var.region
   allowed_account_ids = var.allowed_account_ids
 }
