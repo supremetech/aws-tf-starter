@@ -18,7 +18,4 @@ rm -f /etc/sysconfig/network-scripts/ifcfg-eth0
 ip route del default dev eth0
 
 # wait for network connection
-curl --retry 10 http://www.example.com
-
-# reestablish connections
-systemctl restart amazon-ssm-agent.service
+curl --retry 10 https://www.google.com

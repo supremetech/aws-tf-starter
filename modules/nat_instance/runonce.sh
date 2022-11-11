@@ -1,8 +1,5 @@
 #!/bin/bash -x
 
-# # install CloudWatch Agent
-# yum install -y amazon-cloudwatch-agent
-
 # attach the ENI
 aws ec2 attach-network-interface \
   --region "$(/opt/aws/bin/ec2-metadata -z | sed 's/placement: \(.*\).$/\1/')" \
@@ -13,7 +10,3 @@ aws ec2 attach-network-interface \
 # start SNAT
 systemctl enable snat
 systemctl start snat
-
-# # start CloudWatch Agent
-# systemctl enable amazon-cloudwatch-agent
-# systemctl start amazon-cloudwatch-agent

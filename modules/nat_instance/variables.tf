@@ -14,9 +14,9 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "public_subnet" {
+variable "public_subnets" {
   description = "ID of the public subnet to place the NAT instance"
-  type        = string
+  type        = list(string)
 }
 
 variable "private_route_table_ids" {
@@ -29,9 +29,14 @@ variable "security_group_id" {
   type        = string
 }
 
-variable "availability_zone" {
+variable "availability_zones" {
   description = "Availability zone name"
-  type        = string
+  type        = list(string)
+}
+
+variable "one_nat_per_az" {
+  description = "Place one NAT gateway in each availability zone"
+  type        = bool
 }
 
 variable "image_id" {

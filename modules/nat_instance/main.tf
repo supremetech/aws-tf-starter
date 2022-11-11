@@ -1,8 +1,9 @@
 resource "aws_network_interface" "this" {
+  count             = var.one_nat_per_az ? length(var.availability_zones) : 1
   security_groups   = [var.security_group_id]
-  subnet_id         = var.public_subnet
+  subnet_id         = var.one_nat_per_az ? var.public_subnets[count.index] : var.public_subnets[0]
   source_dest_check = false
-  description       = "ENI for NAT instance ${var.name}-${var.availability_zone}"
+  description       = "ENI for NAT instance ${var.name}-${var.availability_zones[count.index]}"
   tags              = var.tags
 }
 
@@ -10,7 +11,7 @@ resource "aws_route" "this" {
   count                  = length(var.private_route_table_ids)
   route_table_id         = var.private_route_table_ids[count.index]
   destination_cidr_block = "0.0.0.0/0"
-  network_interface_id   = aws_network_interface.this.id
+  network_interface_id   = var.one_nat_per_az ? aws_network_interface.this[count.index].id : aws_network_interface.this[0].id
 }
 
 data "aws_ami" "this" {
@@ -39,7 +40,8 @@ data "aws_ami" "this" {
 }
 
 resource "aws_launch_template" "this" {
-  name_prefix = "${var.name}-lt-${var.availability_zone}"
+  count       = var.one_nat_per_az ? length(var.availability_zones) : 1
+  name_prefix = "${var.name}-lt-${var.availability_zones[count.index]}"
   image_id    = var.image_id != "" ? var.image_id : data.aws_ami.this.id
   key_name    = var.key_name
 
@@ -57,7 +59,7 @@ resource "aws_launch_template" "this" {
     resource_type = "instance"
     tags = merge(
       {
-        Name = "${var.name}-${var.availability_zone}"
+        Name = "${var.name}-${var.availability_zones[count.index]}"
       },
       var.tags
     )
@@ -70,7 +72,7 @@ resource "aws_launch_template" "this" {
       write_files : concat([
         {
           path : "/opt/nat/runonce.sh",
-          content : templatefile("${path.module}/runonce.sh", { eni_id = aws_network_interface.this.id }),
+          content : templatefile("${path.module}/runonce.sh", { eni_id = var.one_nat_per_az ? aws_network_interface.this[count.index].id : aws_network_interface.this[0].id }),
           permissions : "0755",
         },
         {
@@ -81,11 +83,7 @@ resource "aws_launch_template" "this" {
         {
           path : "/etc/systemd/system/snat.service",
           content : file("${path.module}/snat.service")
-        },
-        # {
-        #   path : "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
-        #   content : file("${path.module}/amazon-cloudwatch-agent.json")
-        # }
+        }
       ], var.user_data_write_files),
       runcmd : concat([
         ["/opt/nat/runonce.sh"],
@@ -96,18 +94,19 @@ resource "aws_launch_template" "this" {
   description = "Launch template for NAT Instance ${var.name}"
   tags = merge(
     {
-      Name = "${var.name}-${var.availability_zone}"
+      Name = "${var.name}-${var.availability_zones[count.index]}"
     },
     var.tags
   )
 }
 
 resource "aws_autoscaling_group" "this" {
-  name_prefix         = "${var.name}-asg-${var.availability_zone}"
+  count               = var.one_nat_per_az ? length(var.availability_zones) : 1
+  name_prefix         = "${var.name}-asg-${var.availability_zones[count.index]}"
   desired_capacity    = var.enabled ? 1 : 0
   min_size            = var.enabled ? 1 : 0
   max_size            = 1
-  vpc_zone_identifier = [var.public_subnet]
+  vpc_zone_identifier = var.one_nat_per_az ? [var.public_subnets[count.index]] : [var.public_subnets[0]]
 
   mixed_instances_policy {
     instances_distribution {
@@ -116,7 +115,7 @@ resource "aws_autoscaling_group" "this" {
     }
     launch_template {
       launch_template_specification {
-        launch_template_id = aws_launch_template.this.id
+        launch_template_id = var.one_nat_per_az ? aws_launch_template.this[count.index].id : aws_launch_template.this[0].id
         version            = "$Latest"
       }
 
@@ -166,16 +165,6 @@ resource "aws_iam_role" "this" {
 EOF
 
   tags = var.tags
-}
-
-resource "aws_iam_role_policy_attachment" "ssm" {
-  policy_arn = var.ssm_policy_arn
-  role       = aws_iam_role.this.name
-}
-
-resource "aws_iam_role_policy_attachment" "cw_server" {
-  role       = aws_iam_role.this.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
 resource "aws_iam_role_policy" "eni" {

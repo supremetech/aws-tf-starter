@@ -9,7 +9,7 @@ variable "project_name" {
 variable "environment" {
   type = string
   validation {
-    condition     = contains(["dev", "test", "stg", "prod"], var.environment)
+    condition     = contains(["dev", "test", "stg", "prod", "phuocpham"], var.environment)
     error_message = "The environment must be dev, test, stg or prod."
   }
 }
@@ -29,6 +29,7 @@ variable "allowed_ip_ranges" {
 }
 
 variable "vpc" {
+  type = any
   default = {
     cidr_block         = ""
     availability_zones = []
@@ -38,19 +39,18 @@ variable "vpc" {
 }
 
 locals {
-  description = "AWS account profile name"
-  profile     = "${var.project_name}-${var.environment}"
+  profile = "${var.project_name}-${var.environment}"
 }
 
 locals {
-  name_prefix = "${var.project_name}-${var.environment}"
+  name = "${var.project_name}-${var.environment}"
 }
 
 locals {
   common_tags = {
     Builder     = "Terraform",
-    Environment = "${var.environment}"
-    Name        = "${var.project_name}-${var.environment}"
+    Environment = var.environment
+    Service     = "${var.project_name}-${var.environment}"
   }
 }
 

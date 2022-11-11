@@ -1,41 +1,42 @@
+#
 module "vpc" {
   source                 = "terraform-aws-modules/vpc/aws"
   version                = "~> 3.13.0"
-  name                   = local.name_prefix
+  name                   = local.name
   cidr                   = var.vpc.cidr_block
   azs                    = var.vpc.availability_zones
   public_subnets         = var.vpc.public_subnets
   private_subnets        = var.vpc.private_subnets
-  enable_nat_gateway     = var.environment == "prod"
-  single_nat_gateway     = var.environment == "dev"
+  enable_nat_gateway     = var.vpc.enable_nat_gateway
   one_nat_gateway_per_az = var.vpc.one_nat_per_az
   tags                   = local.common_tags
 }
 
 module "nat_instance" {
-  count  = var.environment == "dev" && length(var.vpc.availability_zones) >= 1 ? (!var.vpc.one_nat_per_az ? 1 : length(var.vpc.availability_zones)) : 0
+  # move to module to calculate number of nat instance(s)
   source = "./modules/nat_instance"
 
-  name                    = "${local.name_prefix}-nat-instance"
+  name                    = "${local.name}-nat-instance"
   vpc_id                  = module.vpc.vpc_id
-  public_subnet           = !var.vpc.one_nat_per_az ? module.vpc.public_subnets[0] : module.vpc.public_subnets[count.index]
-  private_route_table_ids = !var.vpc.one_nat_per_az ? module.vpc.private_route_table_ids : ["${module.vpc.private_route_table_ids[count.index]}"]
-  availability_zone       = !var.vpc.one_nat_per_az ? module.vpc.azs[0] : module.vpc.azs[count.index]
+  public_subnets          = module.vpc.public_subnets
+  private_route_table_ids = module.vpc.private_route_table_ids
+  availability_zones      = module.vpc.azs
   security_group_id       = aws_security_group.nat_instance.id
-  key_name                = local.ssh_key_name
+  key_name                = module.key_pair.key_pair_name
   use_spot_instance       = true
+  one_nat_per_az          = var.vpc.one_nat_per_az
 
   tags = local.common_tags
 
 }
 
 resource "aws_eip" "eip_nat_instance" {
-  count             = var.environment == "dev" && length(var.vpc.availability_zones) >= 1 ? (!var.vpc.one_nat_per_az ? 1 : length(var.vpc.availability_zones)) : 0
-  network_interface = !var.vpc.one_nat_per_az ? module.nat_instance[0].eni_id : module.nat_instance[count.index].eni_id
+  count             = length(module.nat_instance.eni_ids)
+  network_interface = module.nat_instance.eni_ids[count.index]
 
   tags = merge(
     {
-      Name = "${local.name_prefix}-eip-nat"
+      Name = "${local.name}-eip-nat"
     }, local.common_tags
   )
 }
@@ -44,7 +45,7 @@ resource "aws_eip" "eip_nat_instance" {
 # NAT Instance Security Group #
 ###############################
 resource "aws_security_group" "nat_instance" {
-  name_prefix = "${local.name_prefix}-nat-instance-sg"
+  name_prefix = "${local.name}-nat-instance-sg"
   vpc_id      = module.vpc.vpc_id
   description = "Security group for NAT instance"
   tags        = local.common_tags
