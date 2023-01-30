@@ -1,3 +1,4 @@
+MAKEFLAGS+=--silent
 Env=$(shell cat ../.env)
 
 .PHONY: all init validate plan apply
